@@ -2,12 +2,16 @@ import base64
 import json
 import os
 from urllib.parse import quote
+import sys
+import logging
 
 # from flask_session import Session
 import requests
 from flask import Flask, request, redirect, render_template
 
 from song import Song
+
+q = Song()
 
 app = Flask(__name__)
 
@@ -43,9 +47,6 @@ auth_query_parameters = {
     "client_id": CLIENT_ID
 }
 
-global q
-q = Song()
-
 @app.route('/access')
 def get_access():
     access = json.load(open('response.json', 'r'))
@@ -70,26 +71,20 @@ def get_access():
     q.update(authorization_header)
     return access
 
+@app.route('/main')
+def go_to_main():
+    if 'response.json' not in os.listdir('.'):
+        return redirect('/login')
+
+    return render_template('index.html')
+
 @app.route('/')
 def index():
+    print('Reached')
     if 'response.json' not in os.listdir('.'):
         return redirect('/login')
 
     get_access()
-
-    # access = json.load(open('response.json', 'r'))
-    # authorization_header = {"Authorization": "Bearer {}".format(access['access_token'])}
-    # user_profile_api_endpoint = "{}/me".format(SPOTIFY_API_URL)
-    # profile_response = requests.get(user_profile_api_endpoint, headers=authorization_header)
-    # profile_data = json.loads(profile_response.text)
-    #
-    # # Get user playlist data
-    # playlist_api_endpoint = "{}/playlists".format(profile_data["href"])
-    # playlists_response = requests.get(playlist_api_endpoint, headers=authorization_header)
-    # playlist_data = json.loads(playlists_response.text)
-    #
-    # # Combine profile and playlist data to display
-    # display_arr = [profile_data] + playlist_data["items"]
     return render_template("index.html")
 
 @app.route("/login")
@@ -98,6 +93,11 @@ def login():
     url_args = "&".join(["{}={}".format(key, quote(val)) for key, val in auth_query_parameters.items()])
     auth_url = "{}/?{}".format(SPOTIFY_AUTH_URL, url_args)
     return redirect(auth_url)
+
+@app.route('/display')
+def display():
+    global q
+    return q.display()
 
 @app.route('/queue')
 def addsong():
@@ -138,5 +138,26 @@ def next():
     q.next()
     return 'Next called'
 
+@app.route('/search')
+def search():
+    if 'response.json' not in os.listdir('.'):
+        return redirect('/login')
+
+    access = get_access()
+    authorization_header = {"Authorization": "Bearer {}".format(access['access_token'])}
+    song = request.args.get('song')
+    global q
+    return q.search(song, authorization_header)
+
+@app.route('/upnext')
+def get_queue():
+    global q
+    return q.get_queue()
+
+@app.route('/<r>')
+def stat(r):
+    print(r)
+    return render_template(r)
+
 if __name__ == "__main__":
-    app.run(debug=False, port=PORT, host='0.0.0.0')
+    app.run(debug=True, port=PORT)

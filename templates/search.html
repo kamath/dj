@@ -1,0 +1,89 @@
+<doctype html>
+<html>
+    <head>
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+         <!-- Compiled and minified CSS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+        <!-- Compiled and minified JavaScript -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+        <style>
+            #current-play {
+                display: none;
+            }
+
+            * {
+                margin: 0;
+            }
+        </style>
+    </head>
+
+    <body>
+        <form action="/queue" method="get" id="queuesong">
+            <input id="search" name="song" type="text">
+            <input type="submit" value="submit" style="visibility: hidden;">
+        </form>
+
+        <div id="results">
+            <h5>Search for something bitch</h5>
+        </div>
+
+        <script>
+            $('#queuesong').submit(function(e){
+                e.preventDefault();
+                alert('Please enter a valid song')
+            });
+
+            function queue(uri) {
+                $.ajax({
+                    url:'/queue',
+                    type:'get',
+                    data: {'song': uri},
+                    success:function(data){
+                        console.log(data);
+                        alert('Queued up!');
+                        window.location.replace("/");
+                    }
+                });
+            }
+
+            $('#search').keyup(function(e){
+                document.getElementById('results').innerHTML = '<h5>Search for something bitch</h5>';
+                if($("#search").val().length > 0) {
+                    e.preventDefault();
+                    $.ajax({
+                        url: '/search',
+                        type: 'get',
+                        data: $('#queuesong').serialize(),
+                        success: function (data) {
+                            console.log(data['uri']);
+                            document.getElementById('results').innerHTML = '';
+                            data['tracks']['items'].forEach(a => {
+                                document.getElementById('results').innerHTML += `
+                                <a href="#" onclick=queue("` + a['uri'] + `")>
+                                     <div class="col s12 m8 offset-m2 l6 offset-l3">
+                                        <div class="card-panel grey lighten-5 z-depth-1">
+                                          <div class="row valign-wrapper">
+                                            <div class="col s2">
+                                              <img src="` + a['album']['images'][2]['url'] + `" class="responsive-img">
+                                            </div>
+                                            <div class="col s10">
+                                              <span class="black-text">
+                                                <h5><bold><b><strong>` + a['name'] + `</bold></b></strong></h5>
+                                                <h5>` + a['artists'].map(x => x['name']).join(', ') + `</h5>
+                                                <h5>` + a['album']['name'] + `</h5>
+                                              </span>
+                                            </div>
+                                           </div>
+                                         </div>
+                                     </div>
+                                </a>
+                                `
+                            });
+                        }
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

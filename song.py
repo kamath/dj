@@ -14,15 +14,15 @@ TODO:
 class Song:
     def __init__(self):
         self.q = 0
-        self.timer = threading.Timer(0, lambda: print('Timer started'))
+        self.timer = threading.Timer(20000, lambda: print('Timer started'))
 
     def queue(self):
-        playback_data = json.loads(requests.get('https://api.spotify.com/v1/me/player', headers=self.header).text)
-
-        self.wait((playback_data['item']['duration_ms'] - playback_data['progress_ms']) // 1000)
-
+        playback_data: dict = self.display()
+        if playback_data == '-1':
+            self.play()
+        else:
+            self.wait((playback_data['item']['duration_ms'] - playback_data['progress_ms']) // 1000)
         print(playback_data)
-        return playback_data
 
     def add(self, song, header):
         self.q += 1
@@ -33,15 +33,23 @@ class Song:
 
         response = requests.post('https://api.spotify.com/v1/playlists/2CbUu1gLjkiPb1OnEvfvt8/tracks', headers=header,
                                  params=params)
+        print(response.text)
         song_id = song.split(':')[-1]
         song_data = json.loads(requests.get(f'https://api.spotify.com/v1/tracks/{song_id}', headers=header).text)
 
-        self.header = header
-        self.display(song_data)
-        return self.queue()
+        print('added song to playlist')
 
-    def display(self, song_data):
-        print(song_data)
+        self.header = header
+        self.queue()
+        return song_data
+
+    def display(self):
+        try:
+            playback_data = requests.get('https://api.spotify.com/v1/me/player', headers=self.header).text
+            playback_data = json.loads(playback_data)
+            return playback_data
+        except json.decoder.JSONDecodeError:
+            return "-1"
 
     def play(self):
         print('reached')
@@ -56,11 +64,11 @@ class Song:
 
         else:
             requests.put('https://api.spotify.com/v1/me/player/shuffle?state=false', headers=self.header)
-            items = json.loads(requests.get('https://api.spotify.com/v1/playlists/2CbUu1gLjkiPb1OnEvfvt8/tracks', headers=self.header).text)
+            items = self.get_queue()
             items = len(items['items'])
             print(items)
             queue_playlist = 'spotify:playlist:2CbUu1gLjkiPb1OnEvfvt8'
-            data = '{"context_uri":"' + queue_playlist + '", "offset": {"position": ' + str(items - self.q) + '}}'
+            data = '{"context_uri":"' + queue_playlist + '", "offset": {"position": ' + str(items) + '}}'
 
             response = requests.put('https://api.spotify.com/v1/me/player/play', headers=self.header, data=data)
 
@@ -74,10 +82,28 @@ class Song:
         self.updated = True
 
     def wait(self, time: int):
-        self.timer = threading.Timer(time, self.play)
+        self.timer = threading.Timer(time - 1, self.play)
         self.timer.start()
 
     def next(self):
         self.timer.cancel()
         self.timer = threading.Timer(0, lambda: print('fake timer'))
         self.play()
+
+    def search(self, song, access):
+        self.header = access
+        params = (
+            ('q', song),
+            ('type', 'track'),
+        )
+        response = requests.get('https://api.spotify.com/v1/search', headers=self.header, params=params)
+        return json.loads(response.text)
+
+    def get_queue(self):
+        if self.q > 0:
+            tor = json.loads(requests.get('https://api.spotify.com/v1/playlists/2CbUu1gLjkiPb1OnEvfvt8/tracks',
+                                    headers=self.header).text)['items'][-self.q:]
+        else:
+            tor = []
+        print(self.q, tor)
+        return {'items': tor}

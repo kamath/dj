@@ -10,7 +10,12 @@
     </head>
 
     <body>
-        <h1>Currently Playing:</h1>
+        <form action="/queue" method="get" id="queuesong">
+            <input id="search" name="song" type="text">
+            <input type="submit" value="submit">
+        </form>
+        <button id="next">next</button>
+
         <div id="not-playing">
             <h3>Nothing currently playing</h3>
         </div>
@@ -23,16 +28,8 @@
             <h4 id="album"></h4>
         </div>
 
-        <button id="next">Next</button>
-        <button id="add"><a href="/search.html">Add</a></button>
-
-        <br>
-        <div id="nextup">
-            <h3>Nothing up next - <a href="search.html">add a song!</a></h3>
-        </div>
-
         <script>
-            function currentPlaying(data, items) {
+            function currentPlaying(data) {
                 $("#not-playing").hide();
                 {#$("#album-img").attr('src', data['album']['images'][0]['url']);#}
 
@@ -41,6 +38,8 @@
                 $("#album").text(data['album']['name']);
                 $("#current-play").show();
             }
+
+
 
             $(document).ready(function() {
                 $.ajax({
@@ -55,34 +54,29 @@
                         else currentPlaying(data['item'])
                     }
                 });
+            });
 
+            $('#queuesong').submit(function(e){
+                e.preventDefault();
                 $.ajax({
-                    url:'/upnext',
+                    url:'/queue',
                     type:'get',
+                    data:$('#queuesong').serialize(),
                     success:function(data){
-                        document.getElementById('nextup').innerHTML = '';
-                        data['items'].forEach(item => {
-                            item = item['track'];
-                            console.log(item);
-                            document.getElementById('nextup').innerHTML += `
-                                <div class="col s12 m8 offset-m2 l6 offset-l3">
-                                    <div class="card-panel grey lighten-5 z-depth-1">
-                                      <div class="row valign-wrapper">
-                                        <div class="col s2">
-                                          <img src="` + item['album']['images'][2]['url'] + `" alt="" class="responsive-img">
-                                        </div>
-                                        <div class="col s10">
-                                          <span class="black-text">
-                                             <h5><bold><b><strong>` + item['name'] + `</bold></b></strong></h5>
-                                             <h5>` + item['artists'].map(x => x['name']).join(', ') + `</h5>
-                                             <h5>` + item['album']['name'] + `</h5>
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                </div>
-                            `
-                        })
+                        console.log(data);
+                        currentPlaying(data)
+                    }
+                });
+            });
+
+            $('#search').keyup(function(e){
+                e.preventDefault();
+                $.ajax({
+                    url:'/search',
+                    type:'get',
+                    data:$('#queuesong').serialize(),
+                    success:function(data){
+                        console.log(data);
                     }
                 });
             });
@@ -91,7 +85,7 @@
                 $.ajax({
                     url:'/next',
                     success:function(result){
-                        console.log(result)
+                        alert(result)
                     }
                 });
             });
