@@ -32,7 +32,7 @@
         </div>
 
         <script>
-            function currentPlaying(data, items) {
+            function currentPlaying(data) {
                 $("#not-playing").hide();
                 {#$("#album-img").attr('src', data['album']['images'][0]['url']);#}
 
@@ -86,6 +86,8 @@
                     }
                 });
             });
+
+            setInterval(5000, currentPlaying())
 
             $('#next').click(function(){
                 $.ajax({
